@@ -47,7 +47,7 @@
 
       entry.results.forEach((r) => {
         const row = document.createElement("p");
-        row.textContent = `${r.match ? "✅" : "❌"} ${r.prop}: ${r.detail}`;
+        row.textContent = `${r.match ? "✅" : "❌"} ${r.prop} on "${r.controlLayer}" → ${r.detail}`;
         container.appendChild(row);
       });
     });
