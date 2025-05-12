@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Hoot Spotter</title>
+</head>
+<body>
+  <h2>Hoot Spotter 🦉</h2>
+  <button id="set-control">Set Control</button>
+  <button id="set-references">Set References</button>
+  <button id="run-scan">Run Scan</button>
+  <button id="close">Close Plugin</button>
+
+  <script>
+    document.getElementById("set-control").onclick = () => {
+      parent.postMessage({ pluginMessage: { type: "set-control" } }, "*");
+    };
+
+    document.getElementById("set-references").onclick = () => {
+      parent.postMessage({ pluginMessage: { type: "set-references" } }, "*");
+    };
+
+    document.getElementById("run-scan").onclick = () => {
+      parent.postMessage({ pluginMessage: { type: "run-scan" } }, "*");
+    };
+
+    document.getElementById("close").onclick = () => {
+      parent.postMessage({ pluginMessage: { type: "close-plugin" } }, "*");
+    };
+    window.onmessage = (event) => {
+  const msg = event.data.pluginMessage;
+  if (msg.type === "scan-complete") {
+    const container = document.getElementById("results") || createResultsContainer();
+    container.innerHTML = ""; // Clear previous
+
+    msg.payload.forEach((entry) => {
+      const title = document.createElement("h3");
+      title.textContent = entry.name;
+      container.appendChild(title);
+
+      if (entry.results.length === 0) {
+        const warning = document.createElement("p");
+        warning.textContent = "⚠️ No comparable properties.";
+        container.appendChild(warning);
+        return;
+      }
+
+      entry.results.forEach((r) => {
+        const row = document.createElement("p");
+        row.textContent = `${r.match ? "✅" : "❌"} ${r.prop}: ${r.detail}`;
+        container.appendChild(row);
+      });
+    });
+  }
+};
+
+function createResultsContainer() {
+  const div = document.createElement("div");
+  div.id = "results";
+  document.body.appendChild(div);
+  return div;
+}
+
+  </script>
+</body>
+</html>
