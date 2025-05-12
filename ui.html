@@ -17,7 +17,7 @@
     };
 
     document.getElementById("set-references").onclick = () => {
-      parent.postMessage({ pluginMessage: { type: "set-references" } }, "*");
+      parent.postMessage({ pluginMessage: { type: "set-reference" } }, "*");
     };
 
     document.getElementById("run-scan").onclick = () => {
