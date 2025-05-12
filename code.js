@@ -46,7 +46,7 @@ figma.ui.onmessage = (msg) => {
           figma.notify("❌ Please select one or more Reference nodes.");
         } else {
           referenceNodes = selection;
-          console.log("✅ References set:", referenceNodes.map(n => n.name));
+          console.log("✅ Reference selections set:", referenceNodes.map(n => n.name));
           figma.notify(`✅ ${referenceNodes.length} Reference node(s) set.`);
         }
       }
