@@ -61,56 +61,32 @@
     };
 
     window.onmessage = (event) => {
-      const msg = event.data.pluginMessage;
-      if (msg.type === "scan-complete") {
-        const container = document.getElementById("results");
-        container.innerHTML = ""; // Clear previous
+  const msg = event.data.pluginMessage;
+  if (msg.type === "scan-complete") {
+    const container = document.getElementById("results");
+    container.innerHTML = "";
 
-        msg.payload.forEach((entry) => {
-          const group = document.createElement("div");
-          group.className = "result-group";
+    msg.payload.forEach((entry) => {
+      entry.results.forEach((r) => {
+        console.log("🧪 Node ID in UI:", r.nodeId); // <— Add this
 
-          const title = document.createElement("h3");
-          title.textContent = entry.name;
-          group.appendChild(title);
+        const row = document.createElement("div");
+        row.textContent = `${r.prop} → ${r.detail}`;
 
-          if (entry.results.length === 0) {
-            const warning = document.createElement("p");
-            warning.textContent = "⚠️ No comparable properties.";
-            group.appendChild(warning);
-          } else {
-            entry.results.forEach((r) => {
-              const row = document.createElement("div");
-              row.className = "result-row";
+        const focusBtn = document.createElement("button");
+        focusBtn.textContent = "🎯";
+        focusBtn.onclick = () => {
+          parent.postMessage({
+            pluginMessage: { type: "focus-node", nodeId: r.nodeId },
+          }, "*");
+        };
 
-              const icon = r.match ? "✅" : "❌";
-              const text = document.createTextNode(
-                `${icon} ${r.prop} on "${r.controlLayer}" → ${r.detail}`
-              );
-
-              row.appendChild(text);
-
-              // 🎯 Add focus button
-              const focusBtn = document.createElement("button");
-              focusBtn.className = "focus-button";
-              focusBtn.title = "Focus in Figma";
-              focusBtn.textContent = "🎯";
-              focusBtn.onclick = () => {
-                parent.postMessage(
-                  { pluginMessage: { type: "focus-node", nodeId: r.nodeId } },
-                  "*"
-                );
-              };
-
-              row.appendChild(focusBtn);
-              group.appendChild(row);
-            });
-          }
-
-          container.appendChild(group);
-        });
-      }
-    };
+        row.appendChild(focusBtn);
+        container.appendChild(row);
+      });
+    });
+  }
+};
   </script>
 </body>
 </html>

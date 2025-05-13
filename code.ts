@@ -44,7 +44,7 @@ figma.ui.onmessage = (msg) => {
           match,
           detail: `${hexA} vs ${hexB}`,
           controlLayer: control.name,
-          nodeId: reference.id
+          nodeId: reference.id,
         });
       }
     }
@@ -89,6 +89,7 @@ figma.ui.onmessage = (msg) => {
         }
       ]
     });
+    console.log("🚀 Sending payload:", JSON.stringify(results, null, 2));
   
     figma.notify("✅ Scan complete!");
   }  
