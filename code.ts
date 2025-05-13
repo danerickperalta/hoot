@@ -4,7 +4,7 @@ function rgbToHex(color: RGB): string {
   const b = Math.round(color.b * 255);
   return `#${((1 << 24) + (r << 16) + (g << 8) + b)
     .toString(16)
-    .slice(1)
+    .slice(1)  
     .toUpperCase()}`;
 }
 
@@ -44,7 +44,7 @@ figma.ui.onmessage = (msg) => {
           match,
           detail: `${hexA} vs ${hexB}`,
           controlLayer: control.name,
-          nodeId: control.id
+          nodeId: reference.id
         });
       }
     }
@@ -60,7 +60,7 @@ figma.ui.onmessage = (msg) => {
         match,
         detail: `${radiusA} vs ${radiusB}`,
         controlLayer: control.name,
-        nodeId: control.id
+        nodeId: reference.id
       });
     }
   
@@ -75,7 +75,7 @@ figma.ui.onmessage = (msg) => {
         match,
         detail: `"${textA}" vs "${textB}"`,
         controlLayer: control.name,
-        nodeId: control.id
+        nodeId: reference.id
       });
     }
   

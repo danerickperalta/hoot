@@ -3,6 +3,36 @@
 <head>
   <meta charset="UTF-8" />
   <title>Hoot Spotter</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+    }
+    h2 {
+      margin-bottom: 10px;
+    }
+    button {
+      margin: 5px 10px 5px 0;
+      padding: 6px 10px;
+    }
+    .result-group {
+      border-top: 1px solid #ddd;
+      margin-top: 20px;
+      padding-top: 10px;
+    }
+    .result-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+    .focus-button {
+      margin-left: 6px;
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-size: 16px;
+    }
+  </style>
 </head>
 <body>
   <h2>Hoot Spotter 🦉</h2>
@@ -11,7 +41,7 @@
   <button id="run-scan">Run Scan</button>
   <button id="close">Close Plugin</button>
 
-  <div id="results" style="margin-top: 20px;"></div>
+  <div id="results"></div>
 
   <script>
     document.getElementById("set-control").onclick = () => {
@@ -37,58 +67,50 @@
         container.innerHTML = ""; // Clear previous
 
         msg.payload.forEach((entry) => {
+          const group = document.createElement("div");
+          group.className = "result-group";
+
           const title = document.createElement("h3");
           title.textContent = entry.name;
-          container.appendChild(title);
+          group.appendChild(title);
 
           if (entry.results.length === 0) {
             const warning = document.createElement("p");
             warning.textContent = "⚠️ No comparable properties.";
-            container.appendChild(warning);
-            return;
+            group.appendChild(warning);
+          } else {
+            entry.results.forEach((r) => {
+              const row = document.createElement("div");
+              row.className = "result-row";
+
+              const icon = r.match ? "✅" : "❌";
+              const text = document.createTextNode(
+                `${icon} ${r.prop} on "${r.controlLayer}" → ${r.detail}`
+              );
+
+              row.appendChild(text);
+
+              // 🎯 Add focus button
+              const focusBtn = document.createElement("button");
+              focusBtn.className = "focus-button";
+              focusBtn.title = "Focus in Figma";
+              focusBtn.textContent = "🎯";
+              focusBtn.onclick = () => {
+                parent.postMessage(
+                  { pluginMessage: { type: "focus-node", nodeId: r.nodeId } },
+                  "*"
+                );
+              };
+
+              row.appendChild(focusBtn);
+              group.appendChild(row);
+            });
           }
 
-          entry.results.forEach((r) => {
-  const row = document.createElement("p");
-  row.style.display = "flex";
-  row.style.alignItems = "center";
-
-  const icon = document.createElement("span");
-  icon.textContent = r.match ? "✅" : "❌";
-  icon.style.marginRight = "8px";
-
-  const text = document.createElement("span");
-  text.textContent = `${r.prop} on "${r.controlLayer}" → ${r.detail}`;
-
-  row.appendChild(icon);
-  row.appendChild(text);
-
-  // 📍 Add focus button
-  if (r.nodeId) {
-    const button = document.createElement("button");
-    button.textContent = "📍";
-    button.title = "Focus in Figma";
-    button.style.marginLeft = "8px";
-    button.onclick = () => {
-      parent.postMessage({ pluginMessage: { type: "focus-node", nodeId: r.nodeId } }, "*");
-    };
-    row.appendChild(button);
-  }
-
-  container.appendChild(row);
-});
-
+          container.appendChild(group);
         });
       }
     };
-
-    // Listen for 📍 button clicks
-    document.addEventListener("click", (e) => {
-      if (e.target.tagName === "BUTTON" && e.target.dataset.nodeid) {
-        const nodeId = e.target.dataset.nodeid;
-        parent.postMessage({ pluginMessage: { type: "focus-node", nodeId } }, "*");
-      }
-    });
   </script>
 </body>
 </html>
