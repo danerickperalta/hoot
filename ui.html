@@ -3,6 +3,36 @@
 <head>
   <meta charset="UTF-8" />
   <title>Hoot Spotter</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+    }
+    h2 {
+      margin-bottom: 10px;
+    }
+    button {
+      margin: 5px 10px 5px 0;
+      padding: 6px 10px;
+    }
+    .result-group {
+      border-top: 1px solid #ddd;
+      margin-top: 20px;
+      padding-top: 10px;
+    }
+    .result-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+    .focus-button {
+      margin-left: 6px;
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-size: 16px;
+    }
+  </style>
 </head>
 <body>
   <h2>Hoot Spotter 🦉</h2>
@@ -10,6 +40,8 @@
   <button id="set-references">Set References</button>
   <button id="run-scan">Run Scan</button>
   <button id="close">Close Plugin</button>
+
+  <div id="results"></div>
 
   <script>
     document.getElementById("set-control").onclick = () => {
@@ -27,40 +59,34 @@
     document.getElementById("close").onclick = () => {
       parent.postMessage({ pluginMessage: { type: "close-plugin" } }, "*");
     };
+
     window.onmessage = (event) => {
   const msg = event.data.pluginMessage;
   if (msg.type === "scan-complete") {
-    const container = document.getElementById("results") || createResultsContainer();
-    container.innerHTML = ""; // Clear previous
+    const container = document.getElementById("results");
+    container.innerHTML = "";
 
     msg.payload.forEach((entry) => {
-      const title = document.createElement("h3");
-      title.textContent = entry.name;
-      container.appendChild(title);
-
-      if (entry.results.length === 0) {
-        const warning = document.createElement("p");
-        warning.textContent = "⚠️ No comparable properties.";
-        container.appendChild(warning);
-        return;
-      }
-
       entry.results.forEach((r) => {
-        const row = document.createElement("p");
-        row.textContent = `${r.match ? "✅" : "❌"} ${r.prop}: ${r.detail}`;
+        console.log("🧪 Node ID in UI:", r.nodeId); // <— Add this
+
+        const row = document.createElement("div");
+        row.textContent = `${r.prop} → ${r.detail}`;
+
+        const focusBtn = document.createElement("button");
+        focusBtn.textContent = "🎯";
+        focusBtn.onclick = () => {
+          parent.postMessage({
+            pluginMessage: { type: "focus-node", nodeId: r.nodeId },
+          }, "*");
+        };
+
+        row.appendChild(focusBtn);
         container.appendChild(row);
       });
     });
   }
 };
-
-function createResultsContainer() {
-  const div = document.createElement("div");
-  div.id = "results";
-  document.body.appendChild(div);
-  return div;
-}
-
   </script>
 </body>
 </html>

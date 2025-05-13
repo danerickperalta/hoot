@@ -1,137 +1,116 @@
-figma.showUI(__html__, { width: 360, height: 300 });
-let controlNode = null;
-let referenceNodes = [];
-
-function flattenNodeTree(node) {
-    let nodes = [];
-  
-    // Skip any node that's hidden
-    if ("visible" in node && !node.visible) {
-      return nodes;
-    }
-  
-    // If it's a text node, return directly
-    if (node.type === "TEXT") {
-      nodes.push(node);
-      return nodes;
-    }
-  
-    // Recurse into children if available
-    if ("children" in node) {
-      for (let child of node.children) {
-        nodes = nodes.concat(flattenNodeTree(child));
-      }
-    } else {
-      nodes.push(node);
-    }
-  
-    return nodes;
-  }   
-  
-figma.ui.onmessage = (msg) => {
-    if (msg.type === "set-control") {
-        const selection = figma.currentPage.selection;
-        if (selection.length !== 1) {
-          figma.notify("❌ Please select exactly ONE Control node.");
-        } else {
-          controlNode = selection[0];
-          console.log("✅ Control set:", controlNode.name);
-          figma.notify("✅ Control node set: " + controlNode.name);
-        }
-      }
-      
-      if (msg.type === "set-references") {
-        const selection = figma.currentPage.selection;
-        if (selection.length < 1) {
-          figma.notify("❌ Please select one or more Reference nodes.");
-        } else {
-          referenceNodes = selection;
-          console.log("✅ Reference selections set:", referenceNodes.map(n => n.name));
-          figma.notify(`✅ ${referenceNodes.length} Reference node(s) set.`);
-        }
-      }
-      
-
-      if (msg.type === "run-scan") {
-        if (!controlNode || referenceNodes.length === 0) {
-          figma.notify("⚠️ Set both Control and Reference nodes first.");
-          return;
-        }
-      
-        const controlChildren = flattenNodeTree(controlNode);
-        const scanResults = []; // ✅ Declare the array to store results
-      
-        figma.notify(`📦 Scanning ${referenceNodes.length} references...`);
-      
-        for (let ref of referenceNodes) {
-          const refChildren = flattenNodeTree(ref);
-          const pairCount = Math.min(controlChildren.length, refChildren.length);
-          const results = [];
-      
-          console.log(`🔍 Comparing: ${ref.name}`);
-      
-          for (let i = 0; i < pairCount; i++) {
-            const c = controlChildren[i];
-            const r = refChildren[i];
-      
-            console.log(`  ➤ Pair ${i}: ${c.type} vs ${r.type}`);
-      
-            if ("fills" in c && "fills" in r) {
-              const fillA = Array.isArray(c.fills) ? c.fills[0] : null;
-              const fillB = Array.isArray(r.fills) ? r.fills[0] : null;
-      
-              if (fillA && fillB && fillA.type === "SOLID" && fillB.type === "SOLID") {
-                const same = JSON.stringify(fillA.color) === JSON.stringify(fillB.color);
-                results.push({
-                  prop: "fill",
-                  match: same,
-                  detail: same ? "Matched fill color" : "Different fill color",
-                  controlLayer: c.name,
-  referenceLayer: r.name
-                });
-              }
-            }
-      
-            if ("cornerRadius" in c && "cornerRadius" in r) {
-              const same = c.cornerRadius === r.cornerRadius;
-              results.push({
-                prop: "cornerRadius",
-                match: same,
-                detail: same ? "Matched corner radius" : `Control: ${c.cornerRadius}, Ref: ${r.cornerRadius}`,
-                controlLayer: c.name,
-  referenceLayer: r.name
-              });
-            }
-      
-            if (c.type === "TEXT" && r.type === "TEXT") {
-              const sameText = c.characters === r.characters;
-              results.push({
-                prop: "text",
-                match: sameText,
-                detail: sameText ? "Matched text" : `Control: "${c.characters}", Ref: "${r.characters}"`,
-                controlLayer: c.name,
-  referenceLayer: r.name
-              });
-            }
-          }
-      
-          scanResults.push({
-            name: ref.name,
-            results: results
-          });
-        }
-      
-        // ✅ Now it's safe to post
-        figma.ui.postMessage({
-          type: "scan-complete",
-          payload: scanResults
-        });
-      
-        figma.notify("🦉 Scan complete — results sent to UI.");
-      }      
-  
-
-  if (msg.type === "close-plugin") {
-    figma.closePlugin();
-  }
+"use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
 };
+function rgbToHex(color) {
+    const r = Math.round(color.r * 255);
+    const g = Math.round(color.g * 255);
+    const b = Math.round(color.b * 255);
+    return `#${((1 << 24) + (r << 16) + (g << 8) + b)
+        .toString(16)
+        .slice(1)
+        .toUpperCase()}`;
+}
+figma.showUI(__html__, { width: 360, height: 300 });
+figma.ui.onmessage = (msg) => __awaiter(void 0, void 0, void 0, function* () {
+    if (msg.type === "set-control") {
+        figma.notify("✅ Control node selected");
+    }
+    if (msg.type === "set-references") {
+        figma.notify("✅ Reference nodes selected");
+    }
+    if (msg.type === "run-scan") {
+        const selection = figma.currentPage.selection;
+        if (selection.length !== 2) {
+            figma.notify("❌ Select exactly TWO nodes: a Control and a Reference.");
+            return;
+        }
+        const [control, reference] = selection;
+        const results = [];
+        // === Fill comparison
+        if ("fills" in control && "fills" in reference) {
+            const fillA = Array.isArray(control.fills) ? control.fills[0] : null;
+            const fillB = Array.isArray(reference.fills) ? reference.fills[0] : null;
+            if ((fillA === null || fillA === void 0 ? void 0 : fillA.type) === "SOLID" && (fillB === null || fillB === void 0 ? void 0 : fillB.type) === "SOLID") {
+                const hexA = rgbToHex(fillA.color);
+                const hexB = rgbToHex(fillB.color);
+                const match = hexA === hexB;
+                results.push({
+                    prop: "fill",
+                    match,
+                    detail: `${hexA} vs ${hexB}`,
+                    controlLayer: control.name,
+                    referenceLayer: reference.name,
+                    nodeId: reference.id
+                });
+            }
+        }
+        // === Corner radius comparison
+        if ("cornerRadius" in control && "cornerRadius" in reference) {
+            const radiusA = control.cornerRadius;
+            const radiusB = reference.cornerRadius;
+            const match = radiusA === radiusB;
+            results.push({
+                prop: "cornerRadius",
+                match,
+                detail: `Control: ${radiusA}, Ref: ${radiusB}`,
+                controlLayer: control.name,
+                referenceLayer: reference.name,
+                nodeId: reference.id
+            });
+        }
+        // === Text content comparison
+        if (control.type === "TEXT" && reference.type === "TEXT") {
+            const textA = control.characters;
+            const textB = reference.characters;
+            const match = textA === textB;
+            results.push({
+                prop: "text",
+                match,
+                detail: `"${textA}" vs "${textB}"`,
+                controlLayer: control.name,
+                referenceLayer: reference.name,
+                nodeId: reference.id
+            });
+        }
+        // Send results to UI
+        figma.ui.postMessage({
+            type: "scan-complete",
+            payload: [
+                {
+                    name: reference.name,
+                    results
+                }
+            ]
+        });
+        console.log("🚀 Sending payload:", JSON.stringify(results, null, 2));
+        figma.notify("✅ Scan complete!");
+    }
+    if (msg.type === "close-plugin") {
+        figma.closePlugin();
+    }
+    if (msg.type === "focus-node" && msg.nodeId) {
+        try {
+            // Using getNodeByIdAsync for dynamic-page document access
+            const node = yield figma.getNodeByIdAsync(msg.nodeId);
+            if (node && "visible" in node) {
+                figma.currentPage.selection = [node];
+                figma.viewport.scrollAndZoomIntoView([node]);
+                figma.notify(`📍 Focused: ${node.name}`);
+            }
+            else {
+                figma.notify("❌ Node not found or not focusable.");
+            }
+        }
+        catch (error) {
+            console.error("Error focusing node:", error);
+            figma.notify("❌ Error focusing on node.");
+        }
+    }
+});
