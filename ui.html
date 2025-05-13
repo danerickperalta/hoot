@@ -49,14 +49,35 @@
           }
 
           entry.results.forEach((r) => {
-            const row = document.createElement("p");
+  const row = document.createElement("p");
+  row.style.display = "flex";
+  row.style.alignItems = "center";
 
-            // Build content with optional 📍 button
-            row.innerHTML = `${r.match ? "✅" : "❌"} ${r.prop} on "${r.controlLayer}" → ${r.detail}`
-              + (r.nodeId ? ` <button data-nodeid="${r.nodeId}">📍</button>` : "");
+  const icon = document.createElement("span");
+  icon.textContent = r.match ? "✅" : "❌";
+  icon.style.marginRight = "8px";
 
-            container.appendChild(row);
-          });
+  const text = document.createElement("span");
+  text.textContent = `${r.prop} on "${r.controlLayer}" → ${r.detail}`;
+
+  row.appendChild(icon);
+  row.appendChild(text);
+
+  // 📍 Add focus button
+  if (r.nodeId) {
+    const button = document.createElement("button");
+    button.textContent = "📍";
+    button.title = "Focus in Figma";
+    button.style.marginLeft = "8px";
+    button.onclick = () => {
+      parent.postMessage({ pluginMessage: { type: "focus-node", nodeId: r.nodeId } }, "*");
+    };
+    row.appendChild(button);
+  }
+
+  container.appendChild(row);
+});
+
         });
       }
     };
