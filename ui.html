@@ -11,6 +11,8 @@
   <button id="run-scan">Run Scan</button>
   <button id="close">Close Plugin</button>
 
+  <div id="results" style="margin-top: 20px;"></div>
+
   <script>
     document.getElementById("set-control").onclick = () => {
       parent.postMessage({ pluginMessage: { type: "set-control" } }, "*");
@@ -27,40 +29,45 @@
     document.getElementById("close").onclick = () => {
       parent.postMessage({ pluginMessage: { type: "close-plugin" } }, "*");
     };
+
     window.onmessage = (event) => {
-  const msg = event.data.pluginMessage;
-  if (msg.type === "scan-complete") {
-    const container = document.getElementById("results") || createResultsContainer();
-    container.innerHTML = ""; // Clear previous
+      const msg = event.data.pluginMessage;
+      if (msg.type === "scan-complete") {
+        const container = document.getElementById("results");
+        container.innerHTML = ""; // Clear previous
 
-    msg.payload.forEach((entry) => {
-      const title = document.createElement("h3");
-      title.textContent = entry.name;
-      container.appendChild(title);
+        msg.payload.forEach((entry) => {
+          const title = document.createElement("h3");
+          title.textContent = entry.name;
+          container.appendChild(title);
 
-      if (entry.results.length === 0) {
-        const warning = document.createElement("p");
-        warning.textContent = "⚠️ No comparable properties.";
-        container.appendChild(warning);
-        return;
+          if (entry.results.length === 0) {
+            const warning = document.createElement("p");
+            warning.textContent = "⚠️ No comparable properties.";
+            container.appendChild(warning);
+            return;
+          }
+
+          entry.results.forEach((r) => {
+            const row = document.createElement("p");
+
+            // Build content with optional 📍 button
+            row.innerHTML = `${r.match ? "✅" : "❌"} ${r.prop} on "${r.controlLayer}" → ${r.detail}`
+              + (r.nodeId ? ` <button data-nodeid="${r.nodeId}">📍</button>` : "");
+
+            container.appendChild(row);
+          });
+        });
       }
+    };
 
-      entry.results.forEach((r) => {
-        const row = document.createElement("p");
-        row.textContent = `${r.match ? "✅" : "❌"} ${r.prop} on "${r.controlLayer}" → ${r.detail}`;
-        container.appendChild(row);
-      });
+    // Listen for 📍 button clicks
+    document.addEventListener("click", (e) => {
+      if (e.target.tagName === "BUTTON" && e.target.dataset.nodeid) {
+        const nodeId = e.target.dataset.nodeid;
+        parent.postMessage({ pluginMessage: { type: "focus-node", nodeId } }, "*");
+      }
     });
-  }
-};
-
-function createResultsContainer() {
-  const div = document.createElement("div");
-  div.id = "results";
-  document.body.appendChild(div);
-  return div;
-}
-
   </script>
 </body>
 </html>
