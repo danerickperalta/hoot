@@ -5,43 +5,194 @@
   <title>Hoot Spotter</title>
   <style>
     body {
-      font-family: sans-serif;
+      font-family: system-ui, sans-serif;
       padding: 20px;
+      margin: 0;
+      color: #333;
     }
     h2 {
       margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-gap: 10px;
+      margin-bottom: 15px;
     }
     button {
-      margin: 5px 10px 5px 0;
-      padding: 6px 10px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid #ddd;
+      background: white;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+    button:hover {
+      background: #f5f5f5;
+    }
+    #run-scan {
+      background: #FFC107;
+      border-color: #FFA000;
+      color: #333;
+      grid-column: 1;
+    }
+    #run-scan:hover {
+      background: #FFB300;
+    }
+    #results {
+      margin-top: 20px;
+      max-height: 450px;
+      overflow-y: auto;
+      border-top: 1px solid #eee;
+      padding-top: 10px;
     }
     .result-group {
-      border-top: 1px solid #ddd;
-      margin-top: 20px;
-      padding-top: 10px;
+      margin-bottom: 20px;
+    }
+    .group-header {
+      font-weight: 600;
+      margin-bottom: 8px;
+      padding: 4px 8px;
+      background: #f0f0f0;
+      border-radius: 4px;
     }
     .result-row {
       display: flex;
+      justify-content: space-between;
       align-items: center;
+      padding: 8px;
       margin-bottom: 5px;
+      border-radius: 4px;
+      background: #f9f9f9;
+    }
+    .result-row:hover {
+      background: #f0f0f0;
+    }
+    .result-details {
+      flex-grow: 1;
+    }
+    .layer-path {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 2px;
+    }
+    .property {
+      font-weight: 500;
+    }
+    .property-value {
+      font-family: 'Menlo', 'Monaco', monospace;
+      font-size: 12px;
+      padding: 1px 4px;
+      background: #eee;
+      border-radius: 3px;
     }
     .focus-button {
-      margin-left: 6px;
+      margin-left: 10px;
       cursor: pointer;
       background: none;
       border: none;
       font-size: 16px;
+      padding: 4px;
+      border-radius: 4px;
+    }
+    .focus-button:hover {
+      background: #e0e0e0;
+    }
+    .match {
+      border-left: 4px solid #4CAF50;
+    }
+    .mismatch {
+      border-left: 4px solid #F44336;
+    }
+    .status-icon {
+      margin-right: 8px;
+      font-size: 14px;
+    }
+    .no-results {
+      padding: 20px;
+      text-align: center;
+      color: #666;
+    }
+    .filter-controls {
+      display: flex;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-top: 10px;
+      border-top: 1px solid #eee;
+    }
+    .filter-controls label {
+      margin-right: 10px;
+    }
+    .filter-toggle {
+      margin-right: 15px;
+    }
+    .summary {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px;
+      background: #f5f5f5;
+      border-radius: 6px;
+      margin-bottom: 15px;
+    }
+    .stat {
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 24px;
+      font-weight: bold;
+    }
+    .stat-label {
+      font-size: 12px;
+      color: #666;
     }
   </style>
 </head>
 <body>
-  <h2>Hoot Spotter 🦉</h2>
-  <button id="set-control">Set Control</button>
-  <button id="set-references">Set References</button>
-  <button id="run-scan">Run Scan</button>
-  <button id="close">Close Plugin</button>
+  <h2>
+    <span>Hoot Spotter</span>
+    <span style="font-size: 24px;">🦉</span>
+  </h2>
+  
+  <div class="controls">
+    <button id="set-control">Set Control</button>
+    <button id="set-references">Set References</button>
+    <button id="run-scan">Run Scan</button>
+    <button id="close">Close Plugin</button>
+  </div>
 
-  <div id="results"></div>
+  <div id="summary" class="summary" style="display: none;">
+    <div class="stat">
+      <div class="stat-value" id="total-count">0</div>
+      <div class="stat-label">Total Properties</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" id="match-count">0</div>
+      <div class="stat-label">Matching</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" id="mismatch-count">0</div>
+      <div class="stat-label">Different</div>
+    </div>
+  </div>
+  
+  <div class="filter-controls" style="display: none;" id="filter-section">
+    <div class="filter-toggle">
+      <input type="checkbox" id="show-matches" checked>
+      <label for="show-matches">Show Matches</label>
+    </div>
+    <div class="filter-toggle">
+      <input type="checkbox" id="show-mismatches" checked>
+      <label for="show-mismatches">Show Differences</label>
+    </div>
+  </div>
+
+  <div id="results">
+    <!-- Results will be injected here -->
+  </div>
 
   <script>
     document.getElementById("set-control").onclick = () => {
@@ -59,34 +210,126 @@
     document.getElementById("close").onclick = () => {
       parent.postMessage({ pluginMessage: { type: "close-plugin" } }, "*");
     };
+    
+    // Filter functionality
+    function applyFilters() {
+      const showMatches = document.getElementById("show-matches").checked;
+      const showMismatches = document.getElementById("show-mismatches").checked;
+      
+      const matchRows = document.querySelectorAll('.match');
+      const mismatchRows = document.querySelectorAll('.mismatch');
+      
+      matchRows.forEach(row => {
+        row.style.display = showMatches ? 'flex' : 'none';
+      });
+      
+      mismatchRows.forEach(row => {
+        row.style.display = showMismatches ? 'flex' : 'none';
+      });
+      
+      // Hide empty groups
+      document.querySelectorAll('.result-group').forEach(group => {
+        const visibleRows = group.querySelectorAll('.result-row[style="display: flex;"]');
+        group.style.display = visibleRows.length > 0 ? 'block' : 'none';
+      });
+    }
+    
+    document.getElementById("show-matches").addEventListener("change", applyFilters);
+    document.getElementById("show-mismatches").addEventListener("change", applyFilters);
 
     window.onmessage = (event) => {
-  const msg = event.data.pluginMessage;
-  if (msg.type === "scan-complete") {
-    const container = document.getElementById("results");
-    container.innerHTML = "";
+      const msg = event.data.pluginMessage;
+      if (msg.type === "scan-complete") {
+        const container = document.getElementById("results");
+        container.innerHTML = "";
+        
+        if (!msg.payload[0].results || msg.payload[0].results.length === 0) {
+          container.innerHTML = "<div class='no-results'>No differences found! Everything matches.</div>";
+          document.getElementById("filter-section").style.display = "none";
+          document.getElementById("summary").style.display = "none";
+          return;
+        }
+        
+        // Show filter and summary sections
+        document.getElementById("filter-section").style.display = "flex";
+        document.getElementById("summary").style.display = "flex";
+        
+        // Update summary stats
+        const totalCount = msg.payload[0].results.length;
+        const matchCount = msg.payload[0].results.filter(r => r.match).length;
+        const mismatchCount = totalCount - matchCount;
+        
+        document.getElementById("total-count").textContent = totalCount;
+        document.getElementById("match-count").textContent = matchCount;
+        document.getElementById("mismatch-count").textContent = mismatchCount;
 
-    msg.payload.forEach((entry) => {
-      entry.results.forEach((r) => {
-        console.log("🧪 Node ID in UI:", r.nodeId); // <— Add this
-
-        const row = document.createElement("div");
-        row.textContent = `${r.prop} → ${r.detail}`;
-
-        const focusBtn = document.createElement("button");
-        focusBtn.textContent = "🎯";
-        focusBtn.onclick = () => {
-          parent.postMessage({
-            pluginMessage: { type: "focus-node", nodeId: r.nodeId },
-          }, "*");
-        };
-
-        row.appendChild(focusBtn);
-        container.appendChild(row);
-      });
-    });
-  }
-};
+        // Group results by layer for better organization
+        const groupedResults = {};
+        msg.payload[0].results.forEach(result => {
+          const key = `${result.controlLayer}–${result.referenceLayer}`;
+          if (!groupedResults[key]) {
+            groupedResults[key] = [];
+          }
+          groupedResults[key].push(result);
+        });
+        
+        // Create HTML for each group
+        for (const [layerKey, results] of Object.entries(groupedResults)) {
+          const groupDiv = document.createElement("div");
+          groupDiv.className = "result-group";
+          
+          const groupHeader = document.createElement("div");
+          groupHeader.className = "group-header";
+          groupHeader.textContent = layerKey;
+          groupDiv.appendChild(groupHeader);
+          
+          results.forEach(r => {
+            const row = document.createElement("div");
+            row.className = `result-row ${r.match ? 'match' : 'mismatch'}`;
+            
+            const iconSpan = document.createElement("span");
+            iconSpan.className = "status-icon";
+            iconSpan.innerHTML = r.match ? "✅" : "❌";
+            
+            const detailsDiv = document.createElement("div");
+            detailsDiv.className = "result-details";
+            
+            const propertyDetails = document.createElement("div");
+            
+            // Format the detail string for better readability
+            const detailParts = r.detail.split(' vs ');
+            
+            propertyDetails.innerHTML = `
+              <span class="property">${r.prop}:</span> 
+              <span class="property-value">${detailParts[0]}</span> vs 
+              <span class="property-value">${detailParts[1]}</span>
+            `;
+            
+            detailsDiv.appendChild(propertyDetails);
+            
+            const focusBtn = document.createElement("button");
+            focusBtn.textContent = "🎯";
+            focusBtn.className = "focus-button";
+            focusBtn.title = "Focus on this layer";
+            focusBtn.onclick = () => {
+              parent.postMessage({
+                pluginMessage: { type: "focus-node", nodeId: r.nodeId },
+              }, "*");
+            };
+            
+            row.appendChild(iconSpan);
+            row.appendChild(detailsDiv);
+            row.appendChild(focusBtn);
+            groupDiv.appendChild(row);
+          });
+          
+          container.appendChild(groupDiv);
+        }
+        
+        // Apply initial filters
+        applyFilters();
+      }
+    };
   </script>
 </body>
 </html>
