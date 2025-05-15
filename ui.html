@@ -43,9 +43,49 @@
     #run-scan:hover {
       background: #FFB300;
     }
+    .mode-selector {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 15px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .mode-option {
+      flex: 1;
+      padding: 8px 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: white;
+    }
+    .mode-option.active {
+      background: #4CAF50;
+      color: white;
+      font-weight: 500;
+    }
+    .filter-section {
+      margin-bottom: 15px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background: #f9f9f9;
+    }
+    .filter-section h3 {
+      margin-top: 0;
+      margin-bottom: 10px;
+      font-size: 14px;
+      color: #666;
+    }
+    select {
+      width: 100%;
+      padding: 8px;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+    }
     #results {
       margin-top: 20px;
-      max-height: 450px;
+      max-height: 350px;
       overflow-y: auto;
       border-top: 1px solid #eee;
       padding-top: 10px;
@@ -59,6 +99,15 @@
       padding: 4px 8px;
       background: #f0f0f0;
       border-radius: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .group-header .component-type {
+      font-size: 12px;
+      padding: 2px 6px;
+      background: #e0e0e0;
+      border-radius: 12px;
     }
     .result-row {
       display: flex;
@@ -149,6 +198,69 @@
       font-size: 12px;
       color: #666;
     }
+    
+    /* Harmony Mode Styles */
+    .harmony-score {
+      display: flex;
+      flex-direction: column;
+      padding: 10px;
+      border-radius: 6px;
+      background: #f9f9f9;
+      margin-bottom: 15px;
+    }
+    .harmony-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .harmony-title {
+      font-weight: 600;
+    }
+    .overall-score {
+      font-size: 24px;
+      font-weight: bold;
+      padding: 5px 12px;
+      border-radius: 20px;
+      color: white;
+    }
+    .score-great {
+      background: #4CAF50;
+    }
+    .score-good {
+      background: #8BC34A;
+    }
+    .score-ok {
+      background: #FFC107;
+    }
+    .score-poor {
+      background: #FF9800;
+    }
+    .score-bad {
+      background: #F44336;
+    }
+    .score-metrics {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 5px;
+    }
+    .score-metric {
+      text-align: center;
+      flex: 1;
+    }
+    .score-value {
+      font-weight: bold;
+      font-size: 18px;
+    }
+    .score-label {
+      font-size: 12px;
+      color: #666;
+    }
+    .radar-chart {
+      width: 100%;
+      height: 200px;
+      margin: 10px 0;
+    }
   </style>
 </head>
 <body>
@@ -156,6 +268,19 @@
     <span>Hoot Spotter</span>
     <span style="font-size: 24px;">🦉</span>
   </h2>
+  
+  <div class="mode-selector">
+    <div class="mode-option active" id="compliance-mode">Compliance Check</div>
+    <div class="mode-option" id="harmony-mode">Design Harmony</div>
+  </div>
+  
+  <div class="filter-section">
+    <h3>Component Type Filter</h3>
+    <select id="component-type-filter">
+      <option value="">All Components</option>
+      <!-- Component types will be added here dynamically -->
+    </select>
+  </div>
   
   <div class="controls">
     <button id="set-control">Set Control</button>
@@ -195,6 +320,56 @@
   </div>
 
   <script>
+    // Current mode tracking
+    let currentMode = "compliance";
+    let selectedComponentType = "";
+    let componentTypes = [];
+    
+    // Mode switching
+    document.getElementById("compliance-mode").onclick = () => {
+      document.getElementById("compliance-mode").classList.add("active");
+      document.getElementById("harmony-mode").classList.remove("active");
+      currentMode = "compliance";
+      parent.postMessage({ 
+        pluginMessage: { 
+          type: "set-mode", 
+          mode: "compliance" 
+        } 
+      }, "*");
+    };
+    
+    document.getElementById("harmony-mode").onclick = () => {
+      document.getElementById("harmony-mode").classList.add("active");
+      document.getElementById("compliance-mode").classList.remove("active");
+      currentMode = "harmony";
+      parent.postMessage({ 
+        pluginMessage: { 
+          type: "set-mode", 
+          mode: "harmony" 
+        } 
+      }, "*");
+    };
+    
+    // Component type filter
+    document.getElementById("component-type-filter").onchange = (e) => {
+      selectedComponentType = e.target.value;
+      parent.postMessage({ 
+        pluginMessage: { 
+          type: "set-component-type-filter", 
+          componentType: selectedComponentType 
+        } 
+      }, "*");
+    };
+    
+    // Request component types on load
+    window.onload = () => {
+      parent.postMessage({ 
+        pluginMessage: { 
+          type: "get-component-types"
+        } 
+      }, "*");
+    };
+
     document.getElementById("set-control").onclick = () => {
       parent.postMessage({ pluginMessage: { type: "set-control" } }, "*");
     };
@@ -236,21 +411,140 @@
     
     document.getElementById("show-matches").addEventListener("change", applyFilters);
     document.getElementById("show-mismatches").addEventListener("change", applyFilters);
+    
+    // Helper function to get score class
+    function getScoreClass(score) {
+      if (score >= 90) return "score-great";
+      if (score >= 80) return "score-good";
+      if (score >= 70) return "score-ok";
+      if (score >= 60) return "score-poor";
+      return "score-bad";
+    }
+    
+    // Render harmony score UI
+    function renderHarmonyScore(container, harmonyData) {
+      const scoreDiv = document.createElement("div");
+      scoreDiv.className = "harmony-score";
+      
+      // Header with overall score
+      const headerDiv = document.createElement("div");
+      headerDiv.className = "harmony-header";
+      
+      const titleSpan = document.createElement("div");
+      titleSpan.className = "harmony-title";
+      titleSpan.textContent = `${harmonyData.controlLayer} → ${harmonyData.referenceLayer}`;
+      
+      const scoreSpan = document.createElement("div");
+      scoreSpan.className = `overall-score ${getScoreClass(harmonyData.harmony.overallScore)}`;
+      scoreSpan.textContent = harmonyData.harmony.overallScore;
+      
+      headerDiv.appendChild(titleSpan);
+      headerDiv.appendChild(scoreSpan);
+      scoreDiv.appendChild(headerDiv);
+      
+      // Component type tag
+      const typeDiv = document.createElement("div");
+      typeDiv.textContent = harmonyData.componentType || "Unknown Component";
+      typeDiv.style.fontSize = "12px";
+      typeDiv.style.color = "#666";
+      typeDiv.style.marginBottom = "10px";
+      scoreDiv.appendChild(typeDiv);
+      
+      // Score metrics
+      const metricsDiv = document.createElement("div");
+      metricsDiv.className = "score-metrics";
+      
+      const metrics = [
+        { name: "Color", value: harmonyData.harmony.colorScore },
+        { name: "Spacing", value: harmonyData.harmony.spacingScore },
+        { name: "Typography", value: harmonyData.harmony.typographyScore },
+        { name: "Shape", value: harmonyData.harmony.shapeScore }
+      ];
+      
+      metrics.forEach(metric => {
+        const metricDiv = document.createElement("div");
+        metricDiv.className = "score-metric";
+        
+        const valueDiv = document.createElement("div");
+        valueDiv.className = "score-value";
+        valueDiv.textContent = metric.value;
+        
+        // Use a color based on score value
+        if (metric.value >= 90) valueDiv.style.color = "#4CAF50";
+        else if (metric.value >= 80) valueDiv.style.color = "#8BC34A";
+        else if (metric.value >= 70) valueDiv.style.color = "#FFC107";
+        else if (metric.value >= 60) valueDiv.style.color = "#FF9800";
+        else valueDiv.style.color = "#F44336";
+        
+        const labelDiv = document.createElement("div");
+        labelDiv.className = "score-label";
+        labelDiv.textContent = metric.name;
+        
+        metricDiv.appendChild(valueDiv);
+        metricDiv.appendChild(labelDiv);
+        metricsDiv.appendChild(metricDiv);
+      });
+      
+      scoreDiv.appendChild(metricsDiv);
+      
+      // Focus button
+      const focusBtn = document.createElement("button");
+      focusBtn.textContent = "🎯";
+      focusBtn.className = "focus-button";
+      focusBtn.title = "Focus on this component";
+      focusBtn.style.marginTop = "10px";
+      focusBtn.style.alignSelf = "flex-end";
+      focusBtn.onclick = () => {
+        parent.postMessage({
+          pluginMessage: { type: "focus-node", nodeId: harmonyData.nodeId },
+        }, "*");
+      };
+      
+      scoreDiv.appendChild(focusBtn);
+      container.appendChild(scoreDiv);
+    }
 
     window.onmessage = (event) => {
       const msg = event.data.pluginMessage;
+      
+      if (msg.type === "component-types") {
+        // Populate the component type filter dropdown
+        componentTypes = msg.componentTypes;
+        const select = document.getElementById("component-type-filter");
+        
+        componentTypes.forEach(type => {
+          const option = document.createElement("option");
+          option.value = type;
+          option.textContent = type;
+          select.appendChild(option);
+        });
+      }
+      
       if (msg.type === "scan-complete") {
         const container = document.getElementById("results");
         container.innerHTML = "";
         
+        // Handle empty results
         if (!msg.payload[0].results || msg.payload[0].results.length === 0) {
-          container.innerHTML = "<div class='no-results'>No differences found! Everything matches.</div>";
+          container.innerHTML = "<div class='no-results'>No results found! Try adjusting your filter or selecting different components.</div>";
           document.getElementById("filter-section").style.display = "none";
           document.getElementById("summary").style.display = "none";
           return;
         }
         
-        // Show filter and summary sections
+        // If in harmony mode, render harmony scores
+        if (msg.mode === "harmony") {
+          document.getElementById("filter-section").style.display = "none";
+          document.getElementById("summary").style.display = "none";
+          
+          msg.payload[0].results.forEach(result => {
+            renderHarmonyScore(container, result);
+          });
+          
+          return;
+        }
+        
+        // Otherwise, show compliance check results
         document.getElementById("filter-section").style.display = "flex";
         document.getElementById("summary").style.display = "flex";
         
@@ -263,27 +557,45 @@
         document.getElementById("match-count").textContent = matchCount;
         document.getElementById("mismatch-count").textContent = mismatchCount;
 
-        // Group results by layer for better organization
+        // Group results by component and layer
         const groupedResults = {};
         msg.payload[0].results.forEach(result => {
-          const key = `${result.controlLayer}–${result.referenceLayer}`;
-          if (!groupedResults[key]) {
-            groupedResults[key] = [];
+          // Use component type and layer as the key
+          const componentType = result.componentType || "Unknown";
+          const layerKey = `${result.controlLayer}–${result.referenceLayer}`;
+          const groupKey = `${componentType}|${layerKey}`;
+          
+          if (!groupedResults[groupKey]) {
+            groupedResults[groupKey] = {
+              componentType: componentType,
+              layerKey: layerKey,
+              results: []
+            };
           }
-          groupedResults[key].push(result);
+          groupedResults[groupKey].results.push(result);
         });
         
         // Create HTML for each group
-        for (const [layerKey, results] of Object.entries(groupedResults)) {
+        for (const key in groupedResults) {
+          const group = groupedResults[key];
           const groupDiv = document.createElement("div");
           groupDiv.className = "result-group";
           
           const groupHeader = document.createElement("div");
           groupHeader.className = "group-header";
-          groupHeader.textContent = layerKey;
+          
+          const headerText = document.createElement("span");
+          headerText.textContent = group.layerKey;
+          
+          const componentTypeSpan = document.createElement("span");
+          componentTypeSpan.className = "component-type";
+          componentTypeSpan.textContent = group.componentType;
+          
+          groupHeader.appendChild(headerText);
+          groupHeader.appendChild(componentTypeSpan);
           groupDiv.appendChild(groupHeader);
           
-          results.forEach(r => {
+          group.results.forEach(r => {
             const row = document.createElement("div");
             row.className = `result-row ${r.match ? 'match' : 'mismatch'}`;
             

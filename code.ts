@@ -8,6 +8,101 @@ function rgbToHex(color: {r: number, g: number, b: number}): string {
     .toUpperCase()}`;
 }
 
+// Helper type definitions
+interface ComponentTypeDefinition {
+  name: string;
+  nodeTypes: string[];
+  namePatterns: string[];
+  propertiesToCompare: string[];
+}
+
+// Component type definitions
+const COMPONENT_TYPES: ComponentTypeDefinition[] = [
+  {
+    name: "Input Field",
+    nodeTypes: ["FRAME", "RECTANGLE", "TEXT"],
+    namePatterns: ["input", "field", "text field", "textarea"],
+    propertiesToCompare: [
+      "fills", "strokes", "cornerRadius", "characters", 
+      "fontSize", "padding", "layoutMode"
+    ]
+  },
+  {
+    name: "Button",
+    nodeTypes: ["INSTANCE", "FRAME", "RECTANGLE", "TEXT"],
+    namePatterns: ["button", "btn", "cta"],
+    propertiesToCompare: [
+      "fills", "strokes", "cornerRadius", "characters", 
+      "fontSize", "effects", "padding"
+    ]
+  },
+  {
+    name: "Icon",
+    nodeTypes: ["VECTOR", "FRAME", "INSTANCE"],
+    namePatterns: ["icon", "glyph", "symbol"],
+    propertiesToCompare: [
+      "fills", "strokes", "strokeWeight", "opacity", "effects"
+    ]
+  },
+  {
+    name: "Card",
+    nodeTypes: ["FRAME", "COMPONENT", "INSTANCE"],
+    namePatterns: ["card", "tile", "container"],
+    propertiesToCompare: [
+      "fills", "strokes", "cornerRadius", "effects", 
+      "layoutMode", "itemSpacing", "padding"
+    ]
+  },
+  {
+    name: "Typography",
+    nodeTypes: ["TEXT"],
+    namePatterns: ["text", "heading", "title", "label", "paragraph"],
+    propertiesToCompare: [
+      "characters", "fontSize", "fontName", "lineHeight", 
+      "letterSpacing", "textCase", "textDecoration"
+    ]
+  }
+];
+
+// Function to detect component type
+function detectComponentType(node: SceneNode): string {
+  // Default to "Unknown"
+  let detectedType = "Unknown";
+  
+  // Check each component type definition
+  for (const componentType of COMPONENT_TYPES) {
+    // Check if node type matches
+    if (componentType.nodeTypes.includes(node.type)) {
+      // Check if name contains any of the patterns
+      const nodeName = node.name.toLowerCase();
+      
+      for (const pattern of componentType.namePatterns) {
+        if (nodeName.includes(pattern.toLowerCase())) {
+          detectedType = componentType.name;
+          break;
+        }
+      }
+      
+      // If we found a match, stop checking
+      if (detectedType !== "Unknown") break;
+    }
+  }
+  
+  return detectedType;
+}
+
+// Function to get properties to compare based on component type
+function getPropertiesToCompare(componentType: string): string[] {
+  // Find the component type definition
+  const typeDefinition = COMPONENT_TYPES.find(type => type.name === componentType);
+  
+  // If found, return its properties, otherwise return a default set
+  return typeDefinition?.propertiesToCompare || [
+    "fills", "strokes", "cornerRadius", "opacity",
+    "characters", "fontSize", "effects"
+  ];
+}
+
 // Check if a node is visible (including checking all parents)
 function isNodeTrulyVisible(node: SceneNode): boolean {
   let currentNode: BaseNode | null = node;
@@ -78,21 +173,31 @@ function getPropertyValue(node: SceneNode, propName: string): string {
 }
 
 // Compare nodes dynamically by their common properties
-function compareNodesProperties(controlNode: SceneNode, referenceNode: SceneNode): any[] {
+function compareNodesProperties(controlNode: SceneNode, referenceNode: SceneNode, selectedComponentType: string | null = null): any[] {
   const nodeResults: any[] = [];
-  const propertiesToCompare = [
-    // Appearance
-    "fills", "strokes", "strokeWeight", "cornerRadius", "opacity",
-    // Text
-    "characters", "fontSize", "fontName", "letterSpacing", "lineHeight", "textCase",
-    // Layout
-    "layoutMode", "primaryAxisAlignItems", "counterAxisAlignItems", "paddingLeft", "paddingRight", 
-    "paddingTop", "paddingBottom", "itemSpacing",
-    // Effects
-    "effects",
-    // Constraints
-    "constraints"
-  ];
+  
+  // Determine which properties to compare based on component type
+  let propertiesToCompare: string[];
+  
+  if (selectedComponentType) {
+    // If a component type is selected, use its properties
+    propertiesToCompare = getPropertiesToCompare(selectedComponentType);
+  } else {
+    // Detect component type from the control node
+    const detectedType = detectComponentType(controlNode);
+    
+    // If we detected a known type, use its properties, otherwise use default list
+    propertiesToCompare = detectedType !== "Unknown" 
+      ? getPropertiesToCompare(detectedType)
+      : [
+          // Default properties to compare
+          "fills", "strokes", "strokeWeight", "cornerRadius", "opacity",
+          "characters", "fontSize", "fontName", "letterSpacing", "lineHeight", "textCase",
+          "layoutMode", "primaryAxisAlignItems", "counterAxisAlignItems", 
+          "paddingLeft", "paddingRight", "paddingTop", "paddingBottom", "itemSpacing",
+          "effects", "constraints"
+        ];
+  }
   
   // Only compare properties that exist on both nodes
   for (const prop of propertiesToCompare) {
@@ -111,7 +216,8 @@ function compareNodesProperties(controlNode: SceneNode, referenceNode: SceneNode
           detail: `${controlValue} vs ${referenceValue}`,
           controlLayer: controlNode.name,
           referenceLayer: referenceNode.name,
-          nodeId: referenceNode.id
+          nodeId: referenceNode.id,
+          componentType: detectComponentType(controlNode)
         });
       }
     }
@@ -120,7 +226,157 @@ function compareNodesProperties(controlNode: SceneNode, referenceNode: SceneNode
   return nodeResults;
 }
 
+// Calculate a harmony score between two components
+function calculateHarmonyScore(controlNode: SceneNode, referenceNode: SceneNode): any {
+  // In a real implementation, this would analyze design patterns and styles
+  // For now, we'll provide a simplified placeholder implementation
+  
+  // Calculate color harmony
+  let colorScore = 0;
+  let colorCount = 0;
+  
+  // Calculate shape harmony
+  let shapeScore = 0;
+  let shapeCount = 0;
+  
+  // Calculate typography harmony
+  let typographyScore = 0;
+  let typographyCount = 0;
+  
+  // Calculate spacing harmony
+  let spacingScore = 0;
+  let spacingCount = 0;
+  
+  // Check various properties and compare for similarity
+  const controlAny = controlNode as any;
+  const referenceAny = referenceNode as any;
+  
+  // Color harmony - compare fills
+  if ('fills' in controlAny && 'fills' in referenceAny) {
+    const controlFills = Array.isArray(controlAny.fills) ? controlAny.fills : [];
+    const referenceFills = Array.isArray(referenceAny.fills) ? referenceAny.fills : [];
+    
+    // Simple color comparison
+    if (controlFills.length > 0 && referenceFills.length > 0) {
+      const controlSolids = controlFills.filter((fill: any) => fill.type === 'SOLID');
+      const referenceSolids = referenceFills.filter((fill: any) => fill.type === 'SOLID');
+      
+      if (controlSolids.length > 0 && referenceSolids.length > 0) {
+        // For each control solid, find the closest reference solid
+        controlSolids.forEach((controlSolid: any) => {
+          const controlHex = rgbToHex(controlSolid.color);
+          
+          // Find best match
+          let bestMatchScore = 0;
+          referenceSolids.forEach((referenceSolid: any) => {
+            const referenceHex = rgbToHex(referenceSolid.color);
+            
+            // Exact match gets perfect score
+            if (controlHex === referenceHex) {
+              bestMatchScore = 100;
+            } else {
+              // Simple scoring - if not exact, but similar format, partial points
+              bestMatchScore = Math.max(bestMatchScore, 50);
+            }
+          });
+          
+          colorScore += bestMatchScore;
+          colorCount++;
+        });
+      }
+    }
+  }
+  
+  // Shape harmony - compare corner radius and dimensions
+  if ('cornerRadius' in controlAny && 'cornerRadius' in referenceAny) {
+    const controlRadius = controlAny.cornerRadius;
+    const referenceRadius = referenceAny.cornerRadius;
+    
+    // Calculate similarity - perfect match = 100, no match = 0
+    const radiusDiff = Math.abs(controlRadius - referenceRadius);
+    const maxRadius = Math.max(controlRadius, referenceRadius);
+    
+    if (maxRadius > 0) {
+      shapeScore += 100 - Math.min(100, (radiusDiff / maxRadius) * 100);
+    } else if (radiusDiff === 0) {
+      shapeScore += 100;
+    }
+    
+    shapeCount++;
+  }
+  
+  // Typography harmony - compare text styles
+  if (controlNode.type === 'TEXT' && referenceNode.type === 'TEXT') {
+    const controlText = controlNode as TextNode;
+    const referenceText = referenceNode as TextNode;
+    
+    // Compare font
+    if (controlText.fontName && referenceText.fontName) {
+      typographyScore += controlText.fontName.family === referenceText.fontName.family ? 100 : 0;
+      typographyCount++;
+      
+      typographyScore += controlText.fontName.style === referenceText.fontName.style ? 100 : 0;
+      typographyCount++;
+    }
+    
+    // Compare size
+    if (controlText.fontSize && referenceText.fontSize) {
+      const sizeDiff = Math.abs(controlText.fontSize - referenceText.fontSize);
+      const maxSize = Math.max(controlText.fontSize, referenceText.fontSize);
+      
+      typographyScore += 100 - Math.min(100, (sizeDiff / maxSize) * 100);
+      typographyCount++;
+    }
+  }
+  
+  // Spacing harmony - compare layout properties
+  const spacingProps = ['itemSpacing', 'paddingLeft', 'paddingRight', 'paddingTop', 'paddingBottom'];
+  
+  spacingProps.forEach(prop => {
+    if (prop in controlAny && prop in referenceAny) {
+      const controlValue = controlAny[prop];
+      const referenceValue = referenceAny[prop];
+      
+      if (typeof controlValue === 'number' && typeof referenceValue === 'number') {
+        const diff = Math.abs(controlValue - referenceValue);
+        const maxValue = Math.max(controlValue, referenceValue, 1); // Avoid division by zero
+        
+        spacingScore += 100 - Math.min(100, (diff / maxValue) * 100);
+        spacingCount++;
+      }
+    }
+  });
+  
+  // Calculate final scores
+  const finalColorScore = colorCount > 0 ? Math.round(colorScore / colorCount) : 50;
+  const finalShapeScore = shapeCount > 0 ? Math.round(shapeScore / shapeCount) : 50;
+  const finalTypographyScore = typographyCount > 0 ? Math.round(typographyScore / typographyCount) : 50;
+  const finalSpacingScore = spacingCount > 0 ? Math.round(spacingScore / spacingCount) : 50;
+  
+  // Overall score is weighted average of all categories
+  const overallScore = Math.round(
+    (finalColorScore * 0.3) + 
+    (finalShapeScore * 0.3) + 
+    (finalTypographyScore * 0.2) + 
+    (finalSpacingScore * 0.2)
+  );
+  
+  return {
+    colorScore: finalColorScore,
+    shapeScore: finalShapeScore,
+    typographyScore: finalTypographyScore,
+    spacingScore: finalSpacingScore,
+    overallScore: overallScore
+  };
+}
+
 figma.showUI(__html__, { width: 450, height: 600 });
+
+// Store the selected component type filter
+let selectedComponentTypeFilter: string | null = null;
+
+// Store the current mode (Compliance or Harmony)
+let currentMode: "compliance" | "harmony" = "compliance";
 
 figma.ui.onmessage = async (msg) => {
   if (msg.type === "set-control") {
@@ -129,6 +385,24 @@ figma.ui.onmessage = async (msg) => {
 
   if (msg.type === "set-references") {
     figma.notify("✅ Reference nodes selected");
+  }
+
+  if (msg.type === "set-mode") {
+    currentMode = msg.mode;
+    figma.notify(`Mode set to: ${currentMode === "compliance" ? "Compliance Check" : "Design Harmony"}`);
+  }
+
+  if (msg.type === "set-component-type-filter") {
+    selectedComponentTypeFilter = msg.componentType;
+    figma.notify(`Filter set to: ${selectedComponentTypeFilter || "All Components"}`);
+  }
+
+  if (msg.type === "get-component-types") {
+    // Send the list of available component types to the UI
+    figma.ui.postMessage({
+      type: "component-types",
+      componentTypes: COMPONENT_TYPES.map(type => type.name)
+    });
   }
 
   if (msg.type === "run-scan") {
@@ -147,10 +421,24 @@ figma.ui.onmessage = async (msg) => {
     
     console.log(`Found ${controlNodes.length} truly visible control nodes and ${referenceNodes.length} truly visible reference nodes`);
     
+    // Filter nodes by component type if a filter is selected
+    let filteredControlNodes = controlNodes;
+    if (selectedComponentTypeFilter) {
+      filteredControlNodes = controlNodes.filter(node => 
+        detectComponentType(node) === selectedComponentTypeFilter
+      );
+      console.log(`Filtered to ${filteredControlNodes.length} ${selectedComponentTypeFilter} components`);
+    }
+    
     // Create a map of reference nodes by name for quick lookups
     const referenceNodesByName: Record<string, SceneNode[]> = {};
     
     referenceNodes.forEach(refNode => {
+      // Also filter reference nodes by component type if needed
+      if (selectedComponentTypeFilter && detectComponentType(refNode) !== selectedComponentTypeFilter) {
+        return; // Skip this reference node if it doesn't match the filter
+      }
+      
       if (!referenceNodesByName[refNode.name]) {
         referenceNodesByName[refNode.name] = [];
       }
@@ -158,7 +446,7 @@ figma.ui.onmessage = async (msg) => {
     });
     
     // Compare each control node with its matching reference node(s) by name
-    controlNodes.forEach(controlNode => {
+    filteredControlNodes.forEach(controlNode => {
       // Skip nodes that are not truly visible (including checking parent visibility)
       if (!isNodeTrulyVisible(controlNode)) return;
       
@@ -173,12 +461,28 @@ figma.ui.onmessage = async (msg) => {
           // Use the first visible match
           const referenceNode = visibleRefNodes[0];
           
-          // Compare all properties dynamically
-          const comparisonResults = compareNodesProperties(controlNode, referenceNode);
-          
-          // Only add results that have actual properties to compare (not empty)
-          if (comparisonResults.length > 0) {
-            allResults.push(...comparisonResults);
+          // If in compliance mode, do detailed property comparison
+          if (currentMode === "compliance") {
+            // Compare all properties dynamically
+            const comparisonResults = compareNodesProperties(controlNode, referenceNode, selectedComponentTypeFilter);
+            
+            // Only add results that have actual properties to compare (not empty)
+            if (comparisonResults.length > 0) {
+              allResults.push(...comparisonResults);
+            }
+          } 
+          // If in harmony mode, calculate design similarity scores
+          else if (currentMode === "harmony") {
+            const componentType = detectComponentType(controlNode);
+            const harmonyScore = calculateHarmonyScore(controlNode, referenceNode);
+            
+            allResults.push({
+              componentType: componentType,
+              controlLayer: controlNode.name,
+              referenceLayer: referenceNode.name,
+              nodeId: referenceNode.id,
+              harmony: harmonyScore
+            });
           }
         }
       }
@@ -187,6 +491,8 @@ figma.ui.onmessage = async (msg) => {
     // Send results to UI
     figma.ui.postMessage({
       type: "scan-complete",
+      mode: currentMode,
+      componentTypeFilter: selectedComponentTypeFilter,
       payload: [
         {
           name: reference.name,
@@ -196,7 +502,16 @@ figma.ui.onmessage = async (msg) => {
     });
 
     console.log("🚀 Sending payload:", JSON.stringify(allResults, null, 2));
-    figma.notify(`✅ Scan complete! Found ${allResults.length} comparison results across ${controlNodes.length} truly visible layers.`);
+    
+    const nodeCount = filteredControlNodes.length;
+    const componentTypeText = selectedComponentTypeFilter 
+      ? `${selectedComponentTypeFilter} components` 
+      : "components";
+    const modeText = currentMode === "compliance" 
+      ? `${allResults.length} property comparisons` 
+      : "harmony scores";
+      
+    figma.notify(`✅ Scan complete! Found ${modeText} across ${nodeCount} visible ${componentTypeText}.`);
   }
 
   if (msg.type === "close-plugin") {
