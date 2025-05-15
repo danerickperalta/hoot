@@ -421,7 +421,7 @@
       return "score-bad";
     }
     
-    // Render harmony score UI
+    // Render harmony score UI with enhanced insights
     function renderHarmonyScore(container, harmonyData) {
       const scoreDiv = document.createElement("div");
       scoreDiv.className = "harmony-score";
@@ -432,7 +432,7 @@
       
       const titleSpan = document.createElement("div");
       titleSpan.className = "harmony-title";
-      titleSpan.textContent = `${harmonyData.controlLayer} → ${harmonyData.referenceLayer}`;
+      titleSpan.textContent = `${harmonyData.referenceLayer}`;
       
       const scoreSpan = document.createElement("div");
       scoreSpan.className = `overall-score ${getScoreClass(harmonyData.harmony.overallScore)}`;
@@ -486,6 +486,30 @@
       });
       
       scoreDiv.appendChild(metricsDiv);
+      
+      // Display insights
+      if (harmonyData.insights && harmonyData.insights.length > 0) {
+        const insightsDiv = document.createElement("div");
+        insightsDiv.style.marginTop = "15px";
+        insightsDiv.style.padding = "10px";
+        insightsDiv.style.background = "#f0f0f0";
+        insightsDiv.style.borderRadius = "4px";
+        insightsDiv.style.fontSize = "13px";
+        
+        const insightsList = document.createElement("ul");
+        insightsList.style.margin = "0";
+        insightsList.style.paddingLeft = "20px";
+        
+        harmonyData.insights.forEach(insight => {
+          const item = document.createElement("li");
+          item.textContent = insight;
+          item.style.marginBottom = "5px";
+          insightsList.appendChild(item);
+        });
+        
+        insightsDiv.appendChild(insightsList);
+        scoreDiv.appendChild(insightsDiv);
+      }
       
       // Focus button
       const focusBtn = document.createElement("button");

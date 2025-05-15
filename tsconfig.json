@@ -1,11 +1,11 @@
 {
   "compilerOptions": {
-    "target": "es6",
-    "lib": ["es6"],
+    "target": "es2016",
+    "lib": ["es2016", "dom"],
+    "moduleResolution": "node",
     "strict": true,
-    "typeRoots": [
-      "./node_modules/@types",
-      "./node_modules/@figma"
-    ]
+    "typeRoots": ["./node_modules/@figma"],
+    "types": ["@figma/plugin-typings"],
+    "skipLibCheck": true
   }
 }
