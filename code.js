@@ -8,18 +8,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-++;
-// This is likely incorrect syntax. It could be part of a loop or counter increment.
-// Some possible fixes depending on the context:
-// Option 1: If it's a counter in a loop or function, it should be:
-counter++;
-// Option 2: If it's a standalone increment without a variable:
-// Remove the semicolon or ensure it's attached to a variable:
-someVariable++;
-// Option 3: If it's part of a for loop:
-for (let i = 0; i < max; i++) {
-    // loop body
-}
 // Evaluate typography harmony
 function evaluateTypographyHarmony(node, pattern) {
     // Only apply to text nodes
